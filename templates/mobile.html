@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Mobile Signature</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body class="mobile-body">
+  <div class="mobile-container">
+    <h2>Draw Your Signature</h2>
+    <p class="mobile-note">Use finger or stylus. Smooth strokes enabled.</p>
+
+    <div class="canvas-wrapper">
+      <canvas id="signatureCanvas"></canvas>
+    </div>
+
+    <div class="mobile-actions">
+      <button id="clearBtn" class="secondary-btn">Clear</button>
+      <button id="sendBtn">Send Signature</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+  <script>
+    const SESSION_ID = "{{ session_id }}";
+
+    const canvas = document.getElementById("signatureCanvas");
+    const clearBtn = document.getElementById("clearBtn");
+    const sendBtn = document.getElementById("sendBtn");
+
+    function resizeCanvas() {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      canvas.width = canvas.offsetWidth * ratio;
+      canvas.height = canvas.offsetHeight * ratio;
+      canvas.getContext("2d").scale(ratio, ratio);
+      signaturePad.clear();
+    }
+
+    const signaturePad = new SignaturePad(canvas, {
+      minWidth: 1.0,
+      maxWidth: 2.8,
+      penColor: "rgb(20, 20, 20)",
+      velocityFilterWeight: 0.7
+    });
+
+    const ws = new WebSocket(`ws://${window.location.host}/ws/mobile/${SESSION_ID}`);
+
+    ws.onopen = () => {
+      console.log("Mobile WebSocket connected");
+      document.querySelector(".mobile-note").textContent = "Connected! Draw your signature below.";
+      document.querySelector(".mobile-note").style.color = "#10b981";
+    };
+
+    ws.onclose = (event) => {
+      console.log("Mobile WebSocket closed:", event.code, event.reason);
+      document.querySelector(".mobile-note").textContent = "Disconnected from server. Please refresh.";
+      document.querySelector(".mobile-note").style.color = "#ef4444";
+    };
+
+    ws.onerror = (error) => {
+      console.error("Mobile WebSocket error:", error);
+      document.querySelector(".mobile-note").textContent = "Connection error. Please refresh.";
+      document.querySelector(".mobile-note").style.color = "#ef4444";
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log("Mobile received:", data);
+      if (data.type === "error") {
+        alert(data.message);
+      }
+    };
+
+    window.addEventListener("load", resizeCanvas);
+    window.addEventListener("resize", resizeCanvas);
+
+    clearBtn.addEventListener("click", () => {
+      signaturePad.clear();
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "clear" }));
+      }
+    });
+
+    sendBtn.addEventListener("click", () => {
+      if (signaturePad.isEmpty()) {
+        alert("Please sign first.");
+        return;
+      }
+
+      if (ws.readyState !== WebSocket.OPEN) {
+        alert("Not connected to server. Please refresh the page.");
+        return;
+      }
+
+      const imageData = signaturePad.toDataURL("image/png");
+      console.log("Sending signature, size:", imageData.length, "chars");
+      ws.send(JSON.stringify({
+        type: "signature",
+        image: imageData
+      }));
+      alert("Signature sent to laptop.");
+    });
+  </script>
+</body>
+</html>

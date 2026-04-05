@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SyncSign</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="page-center">
+    <div class="card upload-card">
+      <h1>SyncSign</h1>
+      <p>Upload a document, open the same session on mobile, sign smoothly, and sync to laptop in real time.</p>
+
+      <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+        <input type="file" name="file" id="fileInput" accept=".pdf,.png,.jpg" required />
+        <button type="submit">Upload Document</button>
+      </form>
+    </div>
+  </div>
+  
+  <script>
+    // File size validation (15 MB limit)
+    const uploadForm = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('fileInput');
+    const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB in bytes
+    
+    uploadForm.addEventListener('submit', function(e) {
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        
+        if (file.size > MAX_FILE_SIZE) {
+          e.preventDefault();
+          alert(`File too large!\n\nMaximum file size: 15 MB\nYour file size: ${fileSizeMB} MB\n\nPlease choose a smaller file.`);
+          fileInput.value = ''; // Clear the file input
+          return false;
+        }
+        
+        // Optional: Show file size info for user awareness
+        console.log(`Uploading file: ${file.name} (${fileSizeMB} MB)`);
+      }
+    });
+    
+    // Also validate on file selection for immediate feedback
+    fileInput.addEventListener('change', function() {
+      if (this.files.length > 0) {
+        const file = this.files[0];
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        
+        if (file.size > MAX_FILE_SIZE) {
+          alert(`File too large!\n\nMaximum file size: 15 MB\nYour file size: ${fileSizeMB} MB\n\nPlease choose a smaller file.`);
+          this.value = ''; // Clear the selection
+        }
+      }
+    });
+  </script>
+</body>
+</html>

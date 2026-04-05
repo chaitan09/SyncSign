@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laptop Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="workspace">
+    <aside class="sidebar">
+      <h2>SyncSign</h2>
+      <p><strong>Session:</strong> {{ session_id }}</p>
+      <p><strong>File:</strong> {{ filename }}</p>
+
+      <div class="qr-box">
+        <p><strong>Scan this QR code on your mobile:</strong></p>
+        <img src="data:image/png;base64,{{ qr_base64 }}" width="180" alt="Mobile QR Code" />
+        <p class="small-note">QR code link:<br><a href="{{ qr_link }}" target="_blank">{{ qr_link }}</a></p>
+        <p class="small-note">Or open this link on your system:<br><a href="{{ mobile_url }}" target="_blank">{{ mobile_url }}</a></p>
+      </div>
+
+      <button id="resetBtn" class="secondary-btn" style="margin-top: 20px; width: 100%;">Reset</button>
+    </aside>
+
+    <main class="main-area">
+      <div class="document-stage" id="documentStage" style="width: 95%; position: relative;">
+        <!-- Preview container: this is the coordinate reference for signatures -->
+        <div id="previewContainer" style="width: 100%; min-height: 900px; position: relative;">
+          <!-- Signature box INSIDE previewContainer so positions match exactly -->
+          <div id="signatureBox" class="signature-box hidden">
+            <img id="signatureImage" src="" alt="Signature" />
+            <!-- 8 resize handles: 4 corners + 4 edges -->
+            <div class="resize-handle rh-nw" data-dir="nw"></div>
+            <div class="resize-handle rh-n"  data-dir="n"></div>
+            <div class="resize-handle rh-ne" data-dir="ne"></div>
+            <div class="resize-handle rh-e"  data-dir="e"></div>
+            <div class="resize-handle rh-se" data-dir="se"></div>
+            <div class="resize-handle rh-s"  data-dir="s"></div>
+            <div class="resize-handle rh-sw" data-dir="sw"></div>
+            <div class="resize-handle rh-w"  data-dir="w"></div>
+          </div>
+        </div>
+        
+        <!-- Hints -->
+        <div class="hint-overlay">
+          💡 Drag to move • Drag any edge/corner to resize • Right-click for options
+        </div>
+      </div>
+      
+      <!-- Context Menu -->
+      <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item" data-action="rotate90">🔄 Rotate 90°</div>
+        <div class="context-menu-item" data-action="rotateleft">↶ Rotate Left 2°</div>
+        <div class="context-menu-item" data-action="rotateright">↷ Rotate Right 2°</div>
+        <div class="context-menu-item" data-action="rotatecustom">🔁 Rotate Custom Angle</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-header">🎨 Change Color:</div>
+        <div class="color-picker-row">
+          <div class="color-option" data-action="color-black" style="background: #000;"></div>
+          <div class="color-option" data-action="color-blue" style="background: #0066ff;"></div>
+          <div class="color-option" data-action="color-red" style="background: #ff0000;"></div>
+          <div class="color-option" data-action="color-green" style="background: #00aa00;"></div>
+          <div class="color-option" data-action="color-orange" style="background: #ff8800;"></div>
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="copy">📋 Copy (Ctrl+C)</div>
+        <div class="context-menu-item" data-action="paste">📄 Paste (Ctrl+V)</div>
+        <div class="context-menu-item" data-action="copytopage">📑 Copy to page...</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" data-action="delete">🗑️ Delete</div>
+      </div>
+      
+      <!-- Page Navigation (hidden for non-PDF files) -->
+      <div id="pageNavigation" class="page-navigation hidden">
+        <button id="prevPageBtn" class="page-nav-btn" title="Previous Page">← Back</button>
+        <span id="pageIndicator" class="page-indicator">Page 1/1</span>
+        <button id="nextPageBtn" class="page-nav-btn" title="Next Page">Next →</button>
+      </div>
+      
+      <!-- Save PDF Button -->
+      <div class="save-button-container">
+        <button id="savePdfBtn" class="save-btn">💾 Save <span id="fileTypeText">PDF</span> with Signatures</button>
+      </div>
+    </main>
+  </div>
+  
+  <script>
+    const SESSION_ID = "{{ session_id }}";
+    const FILE_URL = "{{ file_url }}";
+    const ORIGINAL_FILE_URL = "{{ original_file_url }}";
+    const FILENAME = "{{ filename }}";
+    const FILE_EXT = "{{ file_ext }}";
+    console.log("📄 FILE_EXT from backend:", FILE_EXT);
+    console.log("📄 FILENAME:", FILENAME);
+    console.log("📄 FILE_URL (preview):", FILE_URL);
+    console.log("📄 ORIGINAL_FILE_URL:", ORIGINAL_FILE_URL);
+  </script>
+  <script src="/static/app.js?v=4"></script>
+</body>
+</html>

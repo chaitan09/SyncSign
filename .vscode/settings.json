@@ -1,0 +1,11 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "chat.tools.terminal.autoApprove": {
+        "pkill": true,
+        "lsof": true,
+        "/^pkill -9 -f \"uvicorn main:app\" && sleep 2 && cd /Users/chaitanyam/Agentic\\\\ AI\\\\ Project/syncsign && /opt/homebrew/bin/python3\\.9 -m uvicorn main:app --reload --host 0\\.0\\.0\\.0 --port 8000$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
