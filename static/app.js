@@ -1,5 +1,25 @@
+
+let isConnected = false;
 const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${SESSION_ID}`);
+
+ws.onopen = () => {
+  console.log("✅ Connected to server");
+  isConnected = true;
+  const statusEl = document.getElementById("status");
+  if (statusEl) statusEl.innerText = "Connected";
+};
+
+ws.onerror = (err) => {
+  console.log("❌ WebSocket error:", err);
+};
+
+ws.onclose = () => {
+  console.log("⚠️ WebSocket closed");
+  isConnected = false;
+  const statusEl = document.getElementById("status");
+  if (statusEl) statusEl.innerText = "Disconnected";
+};
 
 const statusText = document.getElementById("statusText");
 const signatureBox = document.getElementById("signatureBox");
