@@ -377,8 +377,7 @@ async def laptop_page(request: Request, session_id: str):
             "filename": session["filename"],
             "file_ext": Path(session["filename"]).suffix.lower(),
             "mobile_url": mobile_url,
-            "qr_base64": qr_base64,
-            "qr_link": qr_link,
+            "qr_base64": qr_base64
         },
     )
 
