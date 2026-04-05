@@ -47,7 +47,8 @@
       velocityFilterWeight: 0.7
     });
 
-    const ws = new WebSocket(`ws://${window.location.host}/ws/mobile/${SESSION_ID}`);
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/mobile/${SESSION_ID}`);
 
     ws.onopen = () => {
       console.log("Mobile WebSocket connected");
