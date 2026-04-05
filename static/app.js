@@ -1,4 +1,5 @@
-const ws = new WebSocket(`ws://${window.location.host}/ws/laptop/${SESSION_ID}`);
+const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+const ws = new WebSocket(`${protocol}://${window.location.host}/ws/laptop/${SESSION_ID}`);
 
 const statusText = document.getElementById("statusText");
 const signatureBox = document.getElementById("signatureBox");

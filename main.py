@@ -343,22 +343,23 @@ async def laptop_page(request: Request, session_id: str):
 
     # Get the host IP address from the incoming request
     import socket
-    def get_local_ip():
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            # doesn't have to be reachable
-            s.connect(('10.255.255.255', 1))
-            IP = s.getsockname()[0]
-        except Exception:
-            IP = '127.0.0.1'
-        finally:
-            s.close()
-        return IP
+    # def get_local_ip():
+    #     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    #     try:
+    #         # doesn't have to be reachable
+    #         s.connect(('10.255.255.255', 1))
+    #         IP = s.getsockname()[0]
+    #     except Exception:
+    #         IP = '127.0.0.1'
+    #     finally:
+    #         s.close()
+    #     return IP
 
-    current_ip = get_local_ip()
-    qr_link = f"http://{current_ip}:8000/mobile/{session_id}"
-    mobile_url = f"{request.base_url}mobile/{session_id}"
-    qr = qrcode.make(qr_link)
+    # current_ip = get_local_ip()
+    # qr_link = f"http://{current_ip}:8000/mobile/{session_id}"
+    base_url = str(request.base_url).rstrip("/")
+    mobile_url = f"{base_url}/mobile/{session_id}"
+    qr = qrcode.make(mobile_url)
     buffer = BytesIO()
     qr.save(buffer, "PNG")
     qr_base64 = base64.b64encode(buffer.getvalue()).decode()
