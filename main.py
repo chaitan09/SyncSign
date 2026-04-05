@@ -1,3 +1,4 @@
+
 import os
 import uuid
 from pathlib import Path
@@ -176,6 +177,19 @@ class ConnectionManager:
         ws = self.mobile_connections.get(session_id)
         if ws:
             await ws.send_json(data)
+
+
+# Generic WebSocket endpoint for /ws/{session_id}
+@app.websocket("/ws/{session_id}")
+async def websocket_endpoint(websocket: WebSocket, session_id: str):
+    await websocket.accept()
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Echo received message (or add your logic here)
+            await websocket.send_text(f"Echo: {data}")
+    except WebSocketDisconnect:
+        pass
 
 
 manager = ConnectionManager()
