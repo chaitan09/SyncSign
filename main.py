@@ -180,7 +180,7 @@ class ConnectionManager:
 
 
 # Generic WebSocket endpoint for /ws/{session_id}
-@app.websocket("/ws/{session_id}")
+@app.websocket("/ws/laptop/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await websocket.accept()
     try:
@@ -417,8 +417,9 @@ async def websocket_laptop(websocket: WebSocket, session_id: str):
 
     try:
         await manager.send_to_laptop(session_id, {
-            "type": "status",
-            "message": "Laptop connected"
+            "type": "singnature",
+            "message": "Laptop connected",
+            "image": data.get("image")
         })
 
         while True:
@@ -447,6 +448,7 @@ async def websocket_mobile(websocket: WebSocket, session_id: str):
             data = await websocket.receive_json()
 
             if data.get("type") == "signature":
+                print("📩 Signature received from mobile")
                 await manager.send_to_laptop(session_id, {
                     "type": "signature",
                     "image": data.get("image")

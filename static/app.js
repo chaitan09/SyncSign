@@ -1,7 +1,7 @@
 
 let isConnected = false;
 const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-const ws = new WebSocket(`${protocol}://${window.location.host}/ws/${SESSION_ID}`);
+const ws = new WebSocket(`${protocol}://${window.location.host}/ws/laptop/${SESSION_ID}`);
 
 ws.onopen = () => {
   console.log("✅ Connected to server");
@@ -17,8 +17,8 @@ ws.onerror = (err) => {
 ws.onclose = () => {
   console.log("⚠️ WebSocket closed");
   isConnected = false;
-  const statusEl = document.getElementById("status");
-  if (statusEl) statusEl.innerText = "Disconnected";
+  
+  document.getElementById("status").innerText = "Disconnected";
 };
 
 const statusText = document.getElementById("statusText");
@@ -33,6 +33,7 @@ ws.onopen = () => {
 };
 
 ws.onmessage = (event) => {
+  console.log("📩 Laptop received:", event.data);
   const data = JSON.parse(event.data);
 
   if (data.type === "status") {
@@ -40,6 +41,7 @@ ws.onmessage = (event) => {
   }
 
   if (data.type === "signature") {
+    console.log("✅ Signature received!");
     signatureImage.src = data.image;
     signatureBox.classList.remove("hidden");
     signatureBox.dataset.rotation = "0";
