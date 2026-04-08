@@ -1,36 +1,102 @@
 
+console.log("🚀 app.js file loaded - starting execution");
+console.log("   Checking SESSION_ID:", typeof SESSION_ID !== 'undefined' ? SESSION_ID : "❌ UNDEFINED!");
+
+// WebSocket initialization
 let isConnected = false;
 const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-const ws = new WebSocket(`${protocol}://${window.location.host}/ws/laptop/${SESSION_ID}`);
+const wsUrl = `${protocol}://${window.location.host}/ws/laptop/${SESSION_ID}`;
+console.log("🔌 Attempting WebSocket connection to:", wsUrl);
+console.log("   Protocol:", protocol);
+console.log("   Host:", window.location.host);
+console.log("   Session ID:", SESSION_ID);
 
-ws.onopen = () => {
-  console.log("✅ Connected to server");
-  isConnected = true;
-  const statusEl = document.getElementById("status");
-  if (statusEl) statusEl.innerText = "Connected";
-};
+let ws;
+try {
+  ws = new WebSocket(wsUrl);
+  console.log("✅ WebSocket object created, waiting for connection...");
+} catch (error) {
+  console.error("❌ FAILED to create WebSocket object:", error);
+  console.error("   Error name:", error.name);
+  console.error("   Error message:", error.message);
+  alert("Failed to create WebSocket connection. Check console for details.");
+  throw error;
+}
 
-ws.onerror = (err) => {
-  console.log("❌ WebSocket error:", err);
-};
-
-ws.onclose = () => {
-  console.log("⚠️ WebSocket closed");
-  isConnected = false;
-  
-  document.getElementById("status").innerText = "Disconnected";
-};
-
+// Get DOM elements
 const statusText = document.getElementById("statusText");
 const signatureBox = document.getElementById("signatureBox");
 const signatureImage = document.getElementById("signatureImage");
-// All 8 resize handles inside signatureBox
 const resizeHandles = signatureBox.querySelectorAll(".resize-handle");
 
-// WebSocket handlers
+// WebSocket event handlers
 ws.onopen = () => {
-  console.log("Laptop WebSocket connected");
+  console.log("✅ Laptop WebSocket CONNECTED successfully!");
+  isConnected = true;
+  clearTimeout(connectionTimeout); // Clear timeout on successful connection
+  
+  // Update visual status indicator
+  const statusEl = document.getElementById("connectionStatus");
+  if (statusEl) {
+    statusEl.style.background = "#4caf50";
+    statusEl.style.color = "#fff";
+    statusEl.textContent = "✅ Connected";
+  }
 };
+
+ws.onerror = (err) => {
+  console.error("❌ WebSocket ERROR occurred:", err);
+  console.error("   Connection URL was:", wsUrl);
+  console.error("   This might be a network issue or server-side problem");
+  isConnected = false;
+  clearTimeout(connectionTimeout);
+  
+  // Update visual status indicator
+  const statusEl = document.getElementById("connectionStatus");
+  if (statusEl) {
+    statusEl.style.background = "#f44336";
+    statusEl.style.color = "#fff";
+    statusEl.textContent = "❌ Connection Error";
+  }
+};
+
+ws.onclose = (event) => {
+  console.warn("⚠️ WebSocket CLOSED");
+  console.warn("   Close code:", event.code);
+  console.warn("   Close reason:", event.reason || "No reason provided");
+  console.warn("   Was clean:", event.wasClean);
+  isConnected = false;
+  clearTimeout(connectionTimeout);
+  
+  // Update visual status indicator
+  const statusEl = document.getElementById("connectionStatus");
+  if (statusEl) {
+    statusEl.style.background = "#ff9800";
+    statusEl.style.color = "#fff";
+    statusEl.textContent = "⚠️ Disconnected";
+  }
+};
+
+// Timeout to detect stuck connections
+const connectionTimeout = setTimeout(() => {
+  if (ws.readyState === WebSocket.CONNECTING) {
+    console.error("⏱️ WebSocket connection TIMEOUT - stuck in CONNECTING state");
+    console.error("   Current readyState:", ws.readyState);
+    console.error("   Expected: 1 (OPEN), Got: 0 (CONNECTING)");
+    console.error("   This usually means the server isn't responding or there's a network issue");
+    
+    // Update visual status indicator  
+    const statusEl = document.getElementById("connectionStatus");
+    if (statusEl) {
+      statusEl.style.background = "#f44336";
+      statusEl.style.color = "#fff";
+      statusEl.textContent = "❌ Connection Timeout";
+    }
+  } else if (ws.readyState !== WebSocket.OPEN) {
+    console.error("⏱️ WebSocket failed to connect within 10 seconds");
+    console.error("   Current readyState:", ws.readyState);
+  }
+}, 10000); // 10 second timeout
 
 ws.onmessage = (event) => {
   console.log("📩 Laptop received:", event.data);
