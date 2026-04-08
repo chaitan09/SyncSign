@@ -157,39 +157,34 @@ class ConnectionManager:
     async def connect_laptop(self, session_id: str, websocket: WebSocket):
         await websocket.accept()
         self.laptop_connections[session_id] = websocket
+        print(f"💻 Laptop connected for session: {session_id}")
 
     async def connect_mobile(self, session_id: str, websocket: WebSocket):
         await websocket.accept()
         self.mobile_connections[session_id] = websocket
+        print(f"📱 Mobile connected for session: {session_id}")
 
     def disconnect_laptop(self, session_id: str):
         self.laptop_connections.pop(session_id, None)
+        print(f"❌ Laptop disconnected for session: {session_id}")
 
     def disconnect_mobile(self, session_id: str):
         self.mobile_connections.pop(session_id, None)
+        print(f"❌ Mobile disconnected for session: {session_id}")
 
     async def send_to_laptop(self, session_id: str, data: dict):
         ws = self.laptop_connections.get(session_id)
         if ws:
+            print(f"📤 Sending to laptop {session_id}: {data.get('type')}")
             await ws.send_json(data)
+        else:
+            print(f"⚠️ No laptop connection found for session {session_id}")
+            print(f"   Available laptop connections: {list(self.laptop_connections.keys())}")
 
     async def send_to_mobile(self, session_id: str, data: dict):
         ws = self.mobile_connections.get(session_id)
         if ws:
             await ws.send_json(data)
-
-
-# Generic WebSocket endpoint for /ws/{session_id}
-@app.websocket("/ws/laptop/{session_id}")
-async def websocket_endpoint(websocket: WebSocket, session_id: str):
-    await websocket.accept()
-    try:
-        while True:
-            data = await websocket.receive_text()
-            # Echo received message (or add your logic here)
-            await websocket.send_text(f"Echo: {data}")
-    except WebSocketDisconnect:
-        pass
 
 
 manager = ConnectionManager()
@@ -416,10 +411,10 @@ async def websocket_laptop(websocket: WebSocket, session_id: str):
     await manager.connect_laptop(session_id, websocket)
 
     try:
+        # Send initial connection status
         await manager.send_to_laptop(session_id, {
-            "type": "singnature",
-            "message": "Laptop connected",
-            "image": data.get("image")
+            "type": "status",
+            "message": "Laptop connected"
         })
 
         while True:
@@ -449,6 +444,7 @@ async def websocket_mobile(websocket: WebSocket, session_id: str):
 
             if data.get("type") == "signature":
                 print("📩 Signature received from mobile")
+                print(f"   Session ID: {session_id}")
                 await manager.send_to_laptop(session_id, {
                     "type": "signature",
                     "image": data.get("image")
