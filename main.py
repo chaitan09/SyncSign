@@ -629,6 +629,19 @@ async def embed_signature(session_id: str, data: dict = Body(...)):
                         img_path = tint_signature(img_path, color_hex)
                         original_path.unlink()  # Delete original black signature
                     
+                    # Apply rotation if specified (BEFORE inserting into PDF)
+                    # PyMuPDF's insert_image rotate parameter only accepts multiples of 90°
+                    # For custom angles, we rotate the image file first using PIL
+                    rotation_angle = sig.get('rotation', 0)
+                    if rotation_angle != 0:
+                        print(f"[ROTATE] Applying {rotation_angle}° rotation to signature")
+                        sig_img = Image.open(img_path).convert("RGBA")
+                        # Rotate counter-clockwise (PIL default) and expand canvas to fit
+                        rotated_img = sig_img.rotate(-rotation_angle, expand=True, resample=Image.BICUBIC)
+                        # Save rotated image back to the same path
+                        rotated_img.save(img_path)
+                        print(f"[ROTATE] Image rotated and saved: {img_path.name}")
+                    
                     # STEP C: Convert UI position → PDF coordinates
                     pdf_x = sig['x'] * scale_x
                     pdf_w = sig['width'] * scale_x
@@ -643,7 +656,8 @@ async def embed_signature(session_id: str, data: dict = Body(...)):
                     print(f"[EMBED] Page {page_num + 1}: PDF rect=({rect.x0:.1f}, {rect.y0:.1f}, {rect.x1:.1f}, {rect.y1:.1f})")
                     
                     # STEP E: 🔥 INSERT SIGNATURE
-                    page.insert_image(rect, filename=str(img_path), rotate=sig.get('rotation', 0))  # type: ignore
+                    # Note: rotate=0 because we already rotated the image file above
+                    page.insert_image(rect, filename=str(img_path), rotate=0)  # type: ignore
                     img_path.unlink()
             
             # STEP F: Save new PDF
@@ -705,11 +719,13 @@ async def embed_signature(session_id: str, data: dict = Body(...)):
                 print(f"[IMAGE] File pos: ({file_x}, {file_y}) size: {file_width}x{file_height}")
                 
                 # Resize signature to match scaled dimensions
-                sig_img = sig_img.resize((file_width, file_height))
+                sig_img = sig_img.resize((file_width, file_height), Image.BICUBIC)
                 
                 # Apply rotation if specified
-                if sig.get('rotation', 0) != 0:
-                    sig_img = sig_img.rotate(-sig['rotation'], expand=True)
+                rotation_angle = sig.get('rotation', 0)
+                if rotation_angle != 0:
+                    print(f"[ROTATE] Applying {rotation_angle}° rotation to signature on image")
+                    sig_img = sig_img.rotate(-rotation_angle, expand=True, resample=Image.BICUBIC)
                 
                 # Paste signature onto base image at scaled position
                 base_img.paste(sig_img, (file_x, file_y), sig_img if sig_img.mode == 'RGBA' else None)
