@@ -1,4 +1,5 @@
 
+console.log("🚀 app.js VERSION 20264091700 - FILE LOADED");
 console.log("🚀 app.js file loaded - starting execution");
 console.log("   Checking SESSION_ID:", typeof SESSION_ID !== 'undefined' ? SESSION_ID : "❌ UNDEFINED!");
 
@@ -803,6 +804,18 @@ function navigateToPage(pageNum) {
     pdfImageHTML.id = 'pdfImage';
     pdfImageHTML.src = `/preview/${SESSION_ID}?page=${currentPage - 1}&dpi=150`;
     pdfImageHTML.alt = `PDF Page ${currentPage}`;
+    console.log(`📄 Loading page ${currentPage} (index ${currentPage - 1}):`, pdfImageHTML.src);
+    
+    // Add error handler
+    pdfImageHTML.onerror = (e) => {
+      console.error(`❌ Failed to load page ${currentPage}:`, pdfImageHTML.src);
+      console.error("   Error details:", e);
+      alert(`Failed to load page ${currentPage}. The file may have been deleted or is unavailable.`);
+    };
+    
+    pdfImageHTML.onload = () => {
+      console.log(`✅ Page ${currentPage} loaded successfully`);
+    };
     
     // CRITICAL styles
     pdfImageHTML.style.width = 'auto';
@@ -1190,8 +1203,9 @@ if (!previewContainer) {
     // Create PDF image element
     const pdfImageHTML = document.createElement('img');
     pdfImageHTML.id = 'pdfImage';
-    pdfImageHTML.src = `/preview/${SESSION_ID}`;
+    pdfImageHTML.src = `/preview/${SESSION_ID}?page=0&dpi=150`;  // Explicitly set page 0
     pdfImageHTML.alt = 'PDF Preview';
+    console.log("📄 Loading first page:", pdfImageHTML.src);
     
     // CRITICAL: Set styles to ensure PDF doesn't block signature
     // Images MUST display at natural size for coordinate accuracy
@@ -1205,6 +1219,18 @@ if (!previewContainer) {
     pdfImageHTML.style.pointerEvents = 'none';  // CRITICAL - allow clicks to pass through
     pdfImageHTML.style.userSelect = 'none';
     pdfImageHTML.draggable = false;
+    
+    // Add error and load handlers
+    pdfImageHTML.onerror = (e) => {
+      console.error("❌ Failed to load initial PDF page:", pdfImageHTML.src);
+      console.error("   Error details:", e);
+      alert("Failed to load PDF. The file may be unavailable. Please try uploading again.");
+    };
+    
+    pdfImageHTML.onload = () => {
+      console.log("✅ Initial PDF page loaded successfully");
+      console.log("   Image dimensions:", pdfImageHTML.naturalWidth, "x", pdfImageHTML.naturalHeight);
+    };
     
     // Insert as FIRST child (before signatureBox)
     previewContainer.insertBefore(pdfImageHTML, previewContainer.firstChild);

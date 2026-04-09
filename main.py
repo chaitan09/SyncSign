@@ -23,7 +23,13 @@ app = FastAPI()
 
 BASE_DIR = Path(__file__).resolve().parent
 UPLOAD_DIR = BASE_DIR / "uploads"
-UPLOAD_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR.mkdir(exist_ok=True, parents=True)
+print(f"📁 Upload directory: {UPLOAD_DIR.absolute()}")
+print(f"   Directory exists: {UPLOAD_DIR.exists()}")
+print(f"   Is writable: {os.access(UPLOAD_DIR, os.W_OK)}")
+print(f"⚠️ NOTE: On Render.com, uploaded files are stored in ephemeral disk storage.")
+print(f"   Files will be deleted when the container restarts or redeploys.")
+print(f"   For production, consider using cloud storage (S3, Google Cloud Storage, etc.)")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
@@ -48,27 +54,40 @@ async def schedule_auto_cleanup(session_id: str, delay_minutes: int = 15):
     # Check if session still exists
     if session_id in sessions:
         session = sessions[session_id]
-        if not session.get("downloaded", False):
-            print(f"🗑️ Auto-cleanup: Deleting files for session {session_id} (15 min timeout)")
-            delete_files_from_disk(session_id)
+        print(f"🗑️ Auto-cleanup: Session {session_id} expired after {delay_minutes} minutes")
+        print(f"   Downloaded: {session.get('downloaded', False)}")
         
-        # Clear session data from memory after 15 minutes
+        # Delete files from disk
+        delete_files_from_disk(session_id)
+        
+        # Clear session data from memory
         sessions.pop(session_id, None)
-        print(f"✅ Session {session_id} cleared from memory after 15 minutes")
+        print(f"✅ Session {session_id} cleared from memory")
+    else:
+        print(f"⏰ Auto-cleanup: Session {session_id} already removed")
 
 async def cleanup_after_download(session_id: str, delay_seconds: int = 30):
-    """Delete files from disk after download completes."""
-    await asyncio.sleep(delay_seconds)
+    """
+    DEPRECATED: No longer used. Kept for backward compatibility.
     
-    if session_id in sessions:
-        print(f"🗑️ Post-download cleanup: Deleting files from disk for session {session_id}")
-        delete_files_from_disk(session_id)
-        # Session data stays in memory for 15 minutes total
+    We do NOT delete files after download anymore because:
+    - Users may want to add more signatures and download again
+    - Files are only deleted by:
+      1. User clicking "Reset" button
+      2. 15-minute auto-cleanup timeout
+    """
+    pass  # No longer performs cleanup
 
 def delete_files_from_disk(session_id: str):
     """Delete physical files from uploads folder (keeps session data in memory)."""
     session = sessions.get(session_id)
     if not session:
+        print(f"⚠️ Cannot delete files: session {session_id} not found")
+        return
+    
+    # Prevent deleting files twice
+    if session.get("files_deleted", False):
+        print(f"ℹ️ Files for session {session_id} already deleted, skipping")
         return
     
     files_to_delete = []
@@ -224,6 +243,14 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
     
     with open(file_path, "wb") as f:
         f.write(content)
+    
+    print(f"📤 File uploaded successfully:")
+    print(f"   Session ID: {session_id}")
+    print(f"   Filename: {file.filename}")
+    print(f"   Saved as: {safe_name}")
+    print(f"   Path: {file_path.absolute()}")
+    print(f"   Size: {file_size / 1024:.1f} KB")
+    print(f"   File exists after write: {file_path.exists()}")
 
     # Initialize session data
     session_data = {
@@ -263,15 +290,37 @@ async def preview_pdf_as_image(session_id: str, page: int = 0, dpi: int = 150):
         page: page number (0-indexed)
         dpi: render resolution (150 = good balance of quality vs speed)
     """
+    print(f"📄 Preview request - Session: {session_id}, Page: {page}, DPI: {dpi}")
+    
     session = sessions.get(session_id)
     if not session:
+        print(f"❌ Session {session_id} not found in sessions dict")
+        print(f"   Available sessions: {list(sessions.keys())}")
         return JSONResponse({"error": "Invalid session"}, status_code=404)
+    
+    print(f"✅ Session found: {session.get('filename')}")
+    
+    # Ensure uploads directory exists
+    if not UPLOAD_DIR.exists():
+        print(f"⚠️ Warning: UPLOAD_DIR doesn't exist, creating it: {UPLOAD_DIR}")
+        UPLOAD_DIR.mkdir(exist_ok=True, parents=True)
     
     # Determine which file to use for preview
     file_path = UPLOAD_DIR / session["stored_name"]
+    print(f"📁 Looking for file at: {file_path}")
+    print(f"   Absolute path: {file_path.absolute()}")
+    print(f"   File exists: {file_path.exists()}")
     
     if not file_path.exists():
-        return JSONResponse({"error": "File not found"}, status_code=404)
+        print(f"❌ File not found on disk: {file_path}")
+        print(f"   Files deleted flag: {session.get('files_deleted', False)}")
+        print(f"   Available files in uploads/:")
+        try:
+            for f in UPLOAD_DIR.iterdir():
+                print(f"     - {f.name}")
+        except Exception as e:
+            print(f"     Error listing files: {e}")
+        return JSONResponse({"error": "File not found on disk. It may have been deleted or the server restarted."}, status_code=404)
     
     ext = file_path.suffix.lower()
     if ext != '.pdf':
@@ -509,7 +558,20 @@ async def embed_signature(session_id: str, data: dict = Body(...)):
         file_path = UPLOAD_DIR / session["stored_name"]
         
         if not file_path.exists():
-            return JSONResponse({"error": "Original file not found"}, status_code=404)
+            print(f"❌ ERROR: Original file not found for session {session_id}")
+            print(f"   Expected file: {file_path}")
+            print(f"   Files deleted flag: {session.get('files_deleted', False)}")
+            print(f"   Session data: {session}")
+            print(f"   Available files in uploads/:")
+            try:
+                for f in UPLOAD_DIR.iterdir():
+                    print(f"     - {f.name}")
+            except Exception as e:
+                print(f"     Error listing files: {e}")
+            
+            return JSONResponse({
+                "error": "Original file not found. The file may have been deleted or the server restarted. Please upload the document again."
+            }, status_code=404)
         
         ext = file_path.suffix.lower()
         # Output file keeps original extension
@@ -665,13 +727,15 @@ async def embed_signature(session_id: str, data: dict = Body(...)):
         else:
             media_type = "application/octet-stream"
         
-        # Mark session as downloaded (prevent auto-cleanup)
+        # Mark session as downloaded
         session["downloaded"] = True
         print(f"✅ Download initiated for session {session_id}")
         
-        # Schedule cleanup after successful download
-        # Give 30 seconds for download to complete, then clean up
-        asyncio.create_task(cleanup_after_download(session_id, delay_seconds=30))
+        # NOTE: We do NOT delete files after download anymore!
+        # Reason: Users may want to add more signatures and download again.
+        # Files will be deleted by:
+        #   1. User clicking "Reset" button
+        #   2. 15-minute auto-cleanup timeout
         
         return FileResponse(
             path=str(output_path),
